@@ -1,0 +1,678 @@
+﻿'// Close all browsers
+systemutil.CloseProcessByName "iexplore.exe"
+
+'// Close Process winword
+systemutil.CloseProcessByName "WINWORD.exe"
+
+'// Variable declaration
+testdata = "D:\SandM\Testdata\Input.xls"
+inidata="D:\SandM\Testdata\ini.xls"
+
+'// Impoting Input.xls content to the added sheet in the datatable
+datatable.AddSheet "dinput"
+datatable.ImportSheet testdata,1,"dinput"
+
+'// Getting values from datatable and store it to variable
+iurl=datatable.Value("Url","dinput")
+iyr=datatable.Value("Year","dinput")
+icno=datatable.Value("ChapterNo","dinput")
+
+'// Open SLD 
+Set objExplorer=createobject("InternetExplorer.Application")
+objExplorer.visible=True
+wait 5
+objExplorer.Navigate(iurl) '// Navigate to the Easel URL
+hwndval=objExplorer.hwnd '// Retrieving handler value for browser
+window("hwnd:="&hwndval).Maximize '// Window Maximize
+Browser("micclass:=Browser","hwnd:="&hwndval).Page("micclass:=Page").WebEdit("name:=year").Highlight
+Browser("micclass:=Browser","hwnd:="&hwndval).Page("micclass:=Page").WebEdit("name:=year").Set iyr
+wait(5)
+Browser("micclass:=Browser","hwnd:="&hwndval).Page("micclass:=Page").WebEdit("name:=number").Highlight
+Browser("micclass:=Browser","hwnd:="&hwndval).Page("micclass:=Page").WebEdit("name:=number").Set icno
+Wait(5)
+Browser("micclass:=Browser","hwnd:="&hwndval).Page("micclass:=Page").WebButton("name:=Search").Highlight
+Browser("micclass:=Browser","hwnd:="&hwndval).Page("micclass:=Page").WebButton("name:=Search").Click
+Wait(5)
+
+
+' Extracting sections from input docs { will be added Later}
+
+
+'Crossverifying the Title & year will be done Later
+yearsandnumbers=iyr&" c. "&icno
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Road Traffic Act 1988").Highlight
+wait(5)
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:="&yearsandnumbers).Highlight
+wait(5)
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Road Traffic Act 1988").Click
+
+
+'clicking on  contents tab, Timeline changes, Version 1 ,Table of contents, Plain view
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Content").Highlight
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Content").Click
+Wait(5)
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Show Timeline of Changes").Highlight
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Show Timeline of Changes").Click
+Wait(5)
+Browser("Road Traffic Act 1988").Page("Road Traffic Act 1988").VirtualButton("pointer").Highlight
+Browser("Road Traffic Act 1988").Page("Road Traffic Act 1988").VirtualButton("pointer").Click
+wait(5)
+
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Table of Contents").Click
+Browser("micclass:=Browser").Page("micclass:=Page").Link("text:=Plain View").Click
+wait(5)
+If Browser("micclass:=Browser").Page("micclass:=Page").WebElement("name:=Back to full view ").Exist Then
+Browser("micclass:=Browser").Page("micclass:=Page").WebElement("name:=Back to full view ").Highlight
+wait(5)
+' Check for Intro document validation Starts
+
+LCCfilename="D:\SandM\SectionDocs\LCC_sections\"&"LCC_"&iyr&"c"&icno&"_s"&"intro"&".doc"
+SLDfilename="D:\SandM\SectionDocs\SLD_sections\"&"SLD_"&iyr&"c"&icno&"_s"&"intro"&".doc"
+
+
+' Get datafrom datatable
+datatable.AddSheet("ini")
+datatable.ImportSheet "D:\SandM\Testdata\ini.xls",1,"ini"
+LCC_Textbefore=datatable.Value ("Text_before_contents","ini")
+LCC_footnote=datatable.Value("LCC_footnote_fontsize","ini")
+LCC_header=datatable.Value("LCC_header_fontsize","ini")
+LCC_annot=datatable.Value("LCC_Annotations_fontsize","ini")
+LCC_header=Ccur(LCC_header)
+LCC_annot=Ccur(LCC_annot)
+LCC_footnote=Ccur(LCC_footnote)
+splittextbefore=split(LCC_Textbefore,",")
+
+' read each line one by one & msgbox of font
+set introa=CreateObject("Word.Application")
+set introb=introa.Documents.Open(LCCfilename)
+introp_count= introb.Paragraphs.Count
+'msgbox "paragraph="&introp_count
+introc=1
+
+Do until introc=introp_count
+introstr_range=introb.Paragraphs(introc).Range.Start
+introend_range=introb.Paragraphs(introc).Range.End
+Set intros_range=introb.Range(introstr_range,introend_range)
+introx_str=intros_range.Text
+'msgbox introx_str
+
+Set introobjectrange=introb.Paragraphs(introc).range
+introfonsz=introobjectrange.Font.Size
+
+If instr( introx_str,splittextbefore(0))or instr (introx_str,splittextbefore(1)) >0 Then
+intros_range.delete
+introb.SaveAs(LCCfilename)
+introp_count=introp_count-1
+
+ElseIf introfonsz=LCC_header Then
+introHeadercnt=introHeadercnt+1
+introTitle= introTitle&introx_str&","
+intros_range.delete
+introb.SaveAs(LCCfilename)
+introp_count=introp_count-1
+
+Elseif introfonsz=LCC_annot Then 
+intros_range.delete
+introb.SaveAs(LCCfilename)
+introp_count=introp_count-1
+
+Else
+introc=introc+1
+
+
+End if
+Loop
+
+introa.Quit
+set introa=nothing
+set introb=nothing
+
+
+If Browser("micclass:=Browser").Page("micclass:=Page").WebElement("name:=Back to full view ").Exist Then
+Browser("micclass:=Browser").Page("micclass:=Page").WebElement("name:=Back to full view ").Highlight
+wait(5)
+Set introoDesc = Description.Create()
+introoDesc("micclass").Value = "Link"
+Set introsldlinks = Browser("micclass:=Browser").Page("micclass:=Page").ChildObjects(introoDesc)
+Linkname=introsldlinks(i).GetRoproperty("Name")
+Wait(5)
+
+End if 
+
+If introHeadercnt=1Then
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Introductory Text").Highlight
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Introductory Text").Click
+wait(5)
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Plain View").Highlight
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Plain View").Click
+wait(5)
+End if
+
+
+'copying SLD Intro Page
+
+If Browser("micclass:=Browser").Page("micclass:=Page").WebElement("name:=Back to full view ").Exist Then
+Browser("micclass:=Browser").Page("micclass:=Page").WebElement("name:=Back to full view ").Highlight
+Wait(5)
+Browser("Road Traffic Act 1988").WinToolbar("ToolbarWindow32").Press "&Edit"
+Browser("Road Traffic Act 1988").WinMenu("ContextMenu").Select "Select All	Ctrl+A"
+Browser("Road Traffic Act 1988").WinToolbar("ToolbarWindow32").Press "&Edit"
+Browser("Road Traffic Act 1988").WinMenu("ContextMenu").Select "Copy	Ctrl+C"
+End if
+
+' copy sld to word doc
+Set introobjWord = CreateObject("Word.Application")
+introobjWord.Visible = True
+introobjWord.Documents.Add
+introobjWord.Selection.Paste
+introobjWord.ActiveDocument.SaveAs (SLDfilename)
+introobjWord.Quit 
+Set  introobjWord=nothing
+
+
+ @@ hightlight id_;_Browser("Road Traffic Act 1988").Page("Road Traffic Act 1988 3").Link("Table of Contents")_;_script infofile_;_ZIP::ssf20.xml_;_
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Back to full view").Click @@ hightlight id_;_Browser("Road Traffic Act 1988").Page("Road Traffic Act 1988 4").Link("Plain View")_;_script infofile_;_ZIP::ssf21.xml_;_
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Table of Contents").Highlight
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Table of Contents").Click
+Wait(5)
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Plain View").Click
+
+' Getting font size ffom ini xls for sld
+SLD_content=datatable.Value("SLD_content_fontsize","ini")
+SLD_text_delete=datatable.Value("SLD_Text_delete","ini")
+SLDsplittextdelete=split(SLD_text_delete,",")
+SLD_content=Ccur(SLD_content)
+
+ 'read each line one by one & msgbox of font
+set introa1=CreateObject("Word.Application")
+set introb1=introa1.Documents.Open(SLDfilename)
+introp_count1=introb1.Paragraphs.Count
+'msgbox "paragraph="&p_count1
+introc1=1
+
+Do until introc1=introp_count1
+introstr_range1=introb1.Paragraphs(introc1).Range.Start
+introend_range1=introb1.Paragraphs(introc1).Range.End
+Set intros_range1=introb1.Range(introstr_range1,introend_range1)
+introx_str1=intros_range1.Text
+'msgbox introx_str1
+
+Set introobjectrange1=introb1.Paragraphs(introc1).range
+introfonsz1=introobjectrange1.Font.Size
+'or objectrange1.Font.Bold =True 
+
+If instr( introx_str1,SLDsplittextdelete(0))or instr (introx_str1,SLDsplittextdelete(1)) or instr (introx_str1,SLDsplittextdelete(2)) or instr (introx_str1,SLDsplittextdelete(3)) or instr (introx_str1,SLDsplittextdelete(4)) or instr (introx_str1,SLDsplittextdelete(5)) or  instr (introx_str1,SLDsplittextdelete(6)) or  instr (introx_str1,SLDsplittextdelete(7)) or  instr (introx_str1,SLDsplittextdelete(8))Then
+intros_range1.delete
+introb1.SaveAs(SLDfilename)
+introp_count1=introp_count1-1
+
+Elseif not introfonsz1=SLD_content Then  
+intros_range1.delete
+introb1.SaveAs(SLDfilename)
+introp_count1=introp_count1-1
+
+
+Else
+introc1=introc1+1
+End if
+
+Loop
+introa1.Quit
+set introa1=nothing
+set introb1=nothing
+
+
+
+
+'**************************************INTRO OVER********************************************************************************************
+
+'// Close Process winword
+systemutil.CloseProcessByName "WINWORD.exe"
+
+'  Check starts for Other Sections
+wait (5)
+i=7
+filnum=1
+Do until filnum>2                         ' loop need to be provided
+LCCfilename="D:\SandM\SectionDocs\LCC_sections\"&"LCC_"&iyr&"c"&icno&"_s"&filnum&".doc"
+SLDfilename="D:\SandM\SectionDocs\SLD_sections\"&"SLD_"&iyr&"c"&icno&"_s"&filnum&".doc"
+'msgbox LCCfilename
+	If i>9 Then
+		ExitTestIteration
+	End If
+  Title=0
+' Getting data from ini xls
+'datatable.AddSheet("ini")
+'datatable.ImportSheet "D:\SandM\Testdata\ini.xls",1,"ini"
+'LCC_Textbefore=datatable.Value ("Text_before_contents","ini")
+'LCC_footnote=datatable.Value("LCC_footnote_fontsize","ini")
+'LCC_header=datatable.Value("LCC_header_fontsize","ini")
+'LCC_annot=datatable.Value("LCC_Annotations_fontsize","ini")
+'LCC_header=Ccur(LCC_header)
+'LCC_annot=Ccur(LCC_annot)
+'LCC_footnote=Ccur(LCC_footnote)
+'splittextbefore=split(LCC_Textbefore,",")
+
+' read each line one by one & msgbox of font
+set a=CreateObject("Word.Application")
+set b=a.Documents.Open(LCCfilename)
+p_count=b.Paragraphs.Count
+'msgbox "paragraph="&p_count
+c=1
+
+Do until c=p_count
+str_range=b.Paragraphs(c).Range.Start
+end_range=b.Paragraphs(c).Range.End
+Set s_range=b.Range(str_range,end_range)
+x_str=s_range.Text
+'msgbox x_str
+
+Set objectrange=b.Paragraphs(c).range
+fonsz=objectrange.Font.Size
+
+If instr( x_str,splittextbefore(0))or instr (x_str,splittextbefore(1)) >0 Then
+s_range.delete
+b.SaveAs(LCCfilename)
+p_count=p_count-1
+
+ElseIf fonsz=LCC_header Then
+Headercnt=Headercnt+1
+Title= Title&x_str&","
+s_range.delete
+b.SaveAs(LCCfilename)
+p_count=p_count-1
+
+Elseif fonsz=LCC_annot Then 
+s_range.delete
+b.SaveAs(LCCfilename)
+p_count=p_count-1
+
+Else
+c=c+1
+
+
+End if
+Loop
+
+a.Quit
+set a=nothing
+set b=nothing
+
+
+If Browser("micclass:=Browser").Page("micclass:=Page").WebElement("name:=Back to full view ").Exist Then
+Browser("micclass:=Browser").Page("micclass:=Page").WebElement("name:=Back to full view ").Highlight
+Wait(5)
+Set oDesc = Description.Create()
+oDesc("micclass").Value = "Link"
+Set sldlinks = Browser("micclass:=Browser").Page("micclass:=Page").ChildObjects(oDesc)
+Linkname=sldlinks(i).GetRoproperty("Name")
+Wait(5)
+End if 
+Title=split(Title,",")
+Actname=Trim(Title(0))
+Partname=Title(1)
+Sectionname=Title(2)
+
+'If Header count is more than 1
+If Instr(1,Trim(Sectionname),Trim(Linkname),1)>0Then
+ Browser("micclass:=Browser").Page("micclass:=Page").Link("name:="&Linkname).Highlight
+						Browser("micclass:=Browser").Page("micclass:=Page").Link("name:="&Linkname).click
+						Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Plain View").Highlight
+						Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Plain View").Click
+						filnum=filnum+1
+						
+' If LCC section name is not matching with SLD Link
+Else
+msgbox  "The Link is missing"  ' Report  in results xls
+End if
+
+'copying SLD page
+
+If Browser("micclass:=Browser").Page("micclass:=Page").WebElement("name:=Back to full view ").Exist Then
+Browser("micclass:=Browser").Page("micclass:=Page").WebElement("name:=Back to full view ").Highlight
+Wait(5)
+Browser("Road Traffic Act 1988").WinToolbar("ToolbarWindow32").Press "&Edit"
+Browser("Road Traffic Act 1988").WinMenu("ContextMenu").Select "Select All	Ctrl+A"
+Browser("Road Traffic Act 1988").WinToolbar("ToolbarWindow32").Press "&Edit"
+Browser("Road Traffic Act 1988").WinMenu("ContextMenu").Select "Copy	Ctrl+C"
+End if
+
+' copy sld to word doc
+Set objWord = CreateObject("Word.Application")
+objWord.Visible = True
+objWord.Documents.Add
+objWord.Selection.Paste
+objWord.ActiveDocument.SaveAs (SLDfilename)
+objWord.Quit 
+Set objWord=nothing
+
+Browser("micclass:=Browser").Page("micclass:=Page").WebElement("name:=Back to full view ").Highlight
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Back to full view").Click @@ hightlight id_;_Browser("Road Traffic Act 1988").Page("Road Traffic Act 1988 4").Link("Plain View")_;_script infofile_;_ZIP::ssf21.xml_;_
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Table of Contents").Highlight
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Table of Contents").Click
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Plain View").Highlight
+Browser("micclass:=Browser").Page("micclass:=Page").Link("name:=Plain View").Click
+wait(5)
+
+' Getting font size ffom ini xls for sld
+SLD_content=datatable.Value("SLD_content_fontsize","ini")
+SLD_text_delete=datatable.Value("SLD_Text_delete","ini")
+SLDsplittextdelete=split(SLD_text_delete,",")
+SLD_content=Ccur(SLD_content)
+
+ 'read each line one by one & msgbox of font
+set a1=CreateObject("Word.Application")
+set b1=a1.Documents.Open(SLDfilename)
+p_count1=b1.Paragraphs.Count
+'msgbox "paragraph="&p_count1
+c1=1
+
+Do until c1=p_count1
+str_range1=b1.Paragraphs(c1).Range.Start
+end_range1=b1.Paragraphs(c1).Range.End
+Set s_range1=b1.Range(str_range1,end_range1)
+x_str1=s_range1.Text
+'msgbox x_str1
+
+Set objectrange1=b1.Paragraphs(c1).range
+fonsz1=objectrange1.Font.Size
+'or objectrange1.Font.Bold =True 
+
+If instr( x_str1,SLDsplittextdelete(0))or instr (x_str1,SLDsplittextdelete(1)) or instr (x_str1,SLDsplittextdelete(2)) or instr (x_str1,SLDsplittextdelete(3)) or instr (x_str1,SLDsplittextdelete(4))or  instr (x_str1,SLDsplittextdelete(5))or  instr (x_str1,SLDsplittextdelete(6))or  instr (x_str1,SLDsplittextdelete(7))Then
+s_range1.delete
+b1.SaveAs(SLDfilename)
+p_count1=p_count1-1
+
+Elseif not fonsz1=SLD_content Then  
+s_range1.delete
+b1.SaveAs(SLDfilename)
+p_count1=p_count1-1
+
+Else
+c1=c1+1
+End if
+
+Loop
+a1.Quit
+set a1=nothing
+set b1=nothing
+
+i=i+2
+Loop
+End if
+
+If Browser("micclass:=Browser").Page("micclass:=Page").WebElement("name:=Back to full view ").Exist Then
+Browser("micclass:=Browser").Page("micclass:=Page").WebElement("name:=Back to full view ").Highlight
+Browser("micclass:=Browser").Page("micclass:=Page").WebElement("name:=Back to full view ").click
+wait(5) @@ hightlight id_;_Browser("Road Traffic Act 1988").Page("Road Traffic Act 1988_5")_;_script infofile_;_ZIP::ssf23.xml_;_
+Browser("micclass:=Browser").Close
+End if
+
+''###################################################REPORT ############################################
+' Creating Excel Report and save the document
+Set Excel=CreateObject("Excel.application")
+Set ExcelSheet = CreateObject("Excel.Sheet")
+ExcelSheet.Application.Visible = True
+Set xlWorkSheet=ExcelSheet.worksheets(1)
+xlWorkSheet.Name = "1988 c. 52"
+xlWorkSheet.Range("A1").interior.colorindex = 40 
+xlWorkSheet.Range("B1").interior.colorindex = 40
+xlWorkSheet.Range("C1").interior.colorindex = 40
+xlWorkSheet.Range("D1").interior.colorindex = 40
+xlWorkSheet.Range("E1").interior.colorindex = 40
+xlWorkSheet.Range("E1").interior.colorindex = 40
+xlWorkSheet.Range("F1").interior.colorindex = 40
+xlWorkSheet.Range("G1").interior.colorindex = 40
+
+xlWorkSheet.Columns("A:A").ColumnWidth = 15
+xlWorkSheet.Columns("B:B").ColumnWidth = 20
+xlWorkSheet.Columns("C:C").ColumnWidth = 25
+xlWorkSheet.Columns("D:D").ColumnWidth =40
+xlWorkSheet.Columns("E:E").ColumnWidth = 40
+xlWorkSheet.Columns("F:F").ColumnWidth = 40
+xlWorkSheet.Columns("G:G").ColumnWidth = 40
+
+xlWorkSheet.Range("A1").RowHeight = 30
+
+ExcelSheet.ActiveSheet.Cells(1,1).Value = "S.No"
+ExcelSheet.ActiveSheet.Cells(1,2).Value = "File Number"
+ExcelSheet.ActiveSheet.Cells(1,3).Value = "Title"
+ExcelSheet.ActiveSheet.Cells(1,4).Value = "Provision containing error"
+ExcelSheet.ActiveSheet.Cells(1,5).Value = "Actual Output (LCC - PDF)"
+ExcelSheet.ActiveSheet.Cells(1,6).Value ="Required output SITE (SLD)"
+ExcelSheet.ActiveSheet.Cells(1,7).Value ="Remarks from SMG"
+
+xlWorkSheet.Cells(1,1).Font.Bold = True
+xlWorkSheet.Cells(1,2).Font.Bold = True
+xlWorkSheet.Cells(1,3).Font.Bold  = True
+xlWorkSheet.Cells(1,4).Font.Bold  = True
+xlWorkSheet.Cells(1,5).Font.Bold  = True
+xlWorkSheet.Cells(1,6).Font.Bold  = True
+xlWorkSheet.Cells(1,7).Font.Bold  = True
+
+
+ExcelSheet.SaveAs "D:\SandM\Result\Road Traffic Act 1988.xls"
+ExcelSheet.Application.Quit
+Set ExcelSheet = Nothing
+'*******************************************************************************************************************************************
+''Copy  from word file
+
+filelist=Array("intro","1","2")
+For filnm=0 to 2
+iyr=1988
+icno=52
+
+'// Close Process winword
+systemutil.CloseProcessByName "WINWORD.exe"
+
+LCCfilename="D:\SandM\SectionDocs\LCC_sections\"&"LCC_"&iyr&"c"&icno&"_s"&filelist(filnm)&".doc"
+'SLDfilename="D:\SandM\SectionDocs\SLD_sections\"&"SLD_"&iyr&"c"&icno&"_s"&filelist(filnm)&".doc"
+
+'Comparision SLD and LCC
+Set CWord = CreateObject("Word.Application")
+CWord.Documents.Open (LCCfilename)
+Dim CobjSelection 
+Set CobjSelection = CWord.Selection 
+CobjSelection.WholeStory
+CobjSelection.Cut
+CWord.ActiveDocument.SaveAs (LCCfilename)
+CWord.Quit
+Set CWord=nothing
+
+' Paste to Notepad
+SystemUtil.Run "notepad","","C:\Documents and Settings\poornimar",""
+Window("regexpwndtitle:=Notepad").WinMenu("menuobjtype:=2").Select "Edit;Paste	Ctrl+V"
+wait(3)
+Window("regexpwndtitle:=Notepad").WinMenu("menuobjtype:=2").Select "Edit;Select All	Ctrl+A"
+Window("regexpwndtitle:=Notepad").WinMenu("menuobjtype:=2").Select "Edit;Copy	Ctrl+C"
+Wait(3)
+Window("regexpwndtitle:=Notepad").Close
+window("Notepad").Dialog("Notepad").WinButton("No").Click
+
+
+Set oApp=CreateObject("Word.Application")
+Set oDoc=oApp.Documents.Add()
+oDoc.Range.Paste 
+oApp.ActiveDocument.SaveAs (LCCfilename)
+oApp.Quit 
+Set oApp=nothing
+Next
+' *****************************************************************SLD Notepad trans**************************************************888
+' SLD fienames
+
+''Copy  from word file
+
+filelist1=Array("intro","1","2")
+For filnm1=0 to 2
+iyr=1988
+icno=52
+
+'// Close Process winword
+systemutil.CloseProcessByName "WINWORD.exe"
+
+'LCCfilename="D:\SandM\SectionDocs\LCC_sections\"&"LCC_"&iyr&"c"&icno&"_s"&filelist(filnm)&".doc"
+SLDfilename="D:\SandM\SectionDocs\SLD_sections\"&"SLD_"&iyr&"c"&icno&"_s"&filelist1(filnm1)&".doc"
+
+'Comparision SLD and LCC
+Set CWord1 = CreateObject("Word.Application")
+CWord1.Documents.Open (SLDfilename)
+Dim CobjSelection1 
+Set CobjSelection1 = CWord1.Selection 
+CobjSelection1.WholeStory
+CobjSelection1.Cut
+CWord1.ActiveDocument.SaveAs (SLDfilename)
+CWord1.Quit
+Set CWord1=nothing
+
+' Paste to Notepad
+SystemUtil.Run "notepad","","C:\Documents and Settings\poornimar",""
+Window("regexpwndtitle:=Notepad").WinMenu("menuobjtype:=2").Select "Edit;Paste	Ctrl+V"
+wait(3)
+Window("regexpwndtitle:=Notepad").WinMenu("menuobjtype:=2").Select "Edit;Select All	Ctrl+A"
+Window("regexpwndtitle:=Notepad").WinMenu("menuobjtype:=2").Select "Edit;Copy	Ctrl+C"
+Wait(3)
+Window("regexpwndtitle:=Notepad").Close
+window("Notepad").Dialog("Notepad").WinButton("No").Click
+
+
+Set oApp1=CreateObject("Word.Application")
+Set oDoc1=oApp1.Documents.Add()
+oDoc1.Range.Paste 
+oApp1.ActiveDocument.SaveAs (SLDfilename)
+oApp1.Quit 
+Set oApp1=nothing
+Next
+
+'''*******************************************************************************************************************************************
+filelist=Array("intro","1","2")
+For filnm=0 to 2
+iyr=1988
+icno=52
+
+'// Close Process winword
+systemutil.CloseProcessByName "WINWORD.exe"
+
+LCCfilename="D:\SandM\SectionDocs\LCC_sections\"&"LCC_"&iyr&"c"&icno&"_s"&filelist(filnm)&".doc"
+SLDfilename="D:\SandM\SectionDocs\SLD_sections\"&"SLD_"&iyr&"c"&icno&"_s"&filelist(filnm)&".doc"
+
+'Comparision SLD and LCC
+Set objWord = CreateObject("Word.Application")
+objWord.Documents.Open (LCCfilename)
+Dim oSelection 
+Set oSelection = objWord.Selection 
+oSelection.ClearFormatting
+
+Set origDoc = objWord.ActiveDocument ' save a pointer to our original doc
+'objWord.ActiveDocument.selection.find.clearformatting
+objWord.ActiveDocument.Compare(SLDfilename)
+' ActiveDocument becomes the result of merging/comparing the two documents
+
+'MsgBox objWord.ActiveDocument.Name & " - revision count : " & CStr(objWord.ActiveDocument.Revisions.Count)
+
+intDiffs = objWord.ActiveDocument.Revisions.Count ' number of differences word reckons there are
+
+If intDiffs = 0 Then
+        intRealDiffCount = 0
+        objWord.ActiveDocument.Close (False)  ' Close and dont save to document that resulted from the Compare
+
+		
+    Else ' word thinks there are some differences. Find cases where we have deleted text and inserted text straight after
+         ' For such cases check if the difference is a change in date and keep score of how many differences are due to this change
+         ' Also compare the apparently deleted and insertion texts are the same and count such cases
+        For lngDiff = 1 To intDiffs
+               intPrevRevisionType = intRevisionType
+               strPrevRevisonText = strRevisionText
+               lngPrevRevisionStartPos = lngRevisionStartPos
+               lngPrevRevisionEndPos = lngRevisionEndPos
+               strRevisionText = objWord.ActiveDocument.Revisions(lngDiff).Range.Text
+               lngRevisionStartPos = objWord.ActiveDocument.Revisions(lngDiff).Range.Start
+               lngRevisionEndPos = objWord.ActiveDocument.Revisions(lngDiff).Range.End
+               intRevisionType = objWord.ActiveDocument.Revisions(lngDiff).Type
+
+			   'MsgBox lngDiff & " " & strRevisionType & " revision text: " & strRevisionText & " start pos " & lngRevisionStartPos & " prev type " & intPrevRevisionType & " prev text " & strPrevRevisonText & " prev end pos " & lngPrevRevisionEndPos
+
+			   If intPrevRevisionType = wdRevisionDelete And intRevisionType = wdRevisionInsert And intPrevRevisionType <> 0 And lngPrevRevisionEndPos = lngRevisionStartPos Then
+                    ' This if statement determines if there was a deletion of text  and then an insertion of text right afterwards
+
+						 If strPrevRevisonText = strRevisionText Then		' same text inserted as deleted - count this
+                              intDeletionAndInsertOfSameTextDiffCount = intDeletionAndInsertOfSameTextDiffCount + 2 
+							  ' observed differences are due to deletion and insertion of the same text.
+							  ' we are going to subtract intDeletionAndInsertOfSameTextDiffCount off the total difference count at the end of the process
+
+							   'MsgBox lngDiff & "Deleted |" & strPrevRevisonText & "| and apparently inserted the same|"
+
+						Else ' not the same text inserted as deleted. I
+                        'MsgBox lngDiff & "Deleted |" & strPrevRevisonText & "| and inserted |" & strRevisionText & "|"
+
+						ActiveDocument.Revisions(lngDiff).Range.Select
+                        Selection.EndOf wdParagraph, wdExtend
+						intPosNextPara = Selection.End
+						ActiveDocument.Range(lngRevisionStartPos, intPosNextPara - 1).Select
+						strPotentialDate = ActiveDocument.Range(lngRevisionStartPos, intPosNextPara - 1).Text
+						End If
+						Else
+						End If
+'						msgbox strPrevRevisonText
+                         call Excelreport ( lngDiff,strRevisionText, lngRevisionStartPos, lngRevisionEndPos,filelist(filnm))
+                     Next 'Next  revision
+						intRealDiffCount = intDiffs - intDeletionAndInsertOfSameTextDiffCount ' substract away the pseudo differences where the same text was inserted as deleted
+						'strFileNameDiffs = origDoc.Path & "\" & Left(origDoc.Name, Len(origDoc.Name) - 4) & "_diff.doc"
+						strFileNameDiffs =   "D:\SandM\DifferenceDocs" & "\" & Left(origDoc.Name, Len(origDoc.Name) - 4) & "_diff.doc"
+					  
+						objWord.ActiveDocument.SaveAs strFileNameDiffs,False
+						objWord.ActiveDocument.Close (False)
+						objWord.Quit
+						set objWord=Nothing
+						
+ End If
+ Next
+
+
+''***********************************************************************************************Report functuion *****************************************************
+' Report functuion 
+public Function Excelreport( mismatchNumber ,mismatch,strpos,endpos,secno )
+										SystemUtil.CloseProcessByName("EXCEL.EXE")
+                                        Set srcData = CreateObject("Excel.Application")
+										srcData.Visible = True
+										Set srcDoc = srcData.Workbooks.Open("D:\SandM\Result\Road Traffic Act 1988.xls")
+                                                r= srcDoc.Worksheets("1988 c. 52").usedrange.rows.count
+                                               If  mismatchNumber MOD 2<>0Then
+												 r=r+1
+												 i=r-1
+												srcDoc.Worksheets("1988 c. 52").Activate
+												srcDoc.Worksheets("1988 c. 52").Cells(r,1).value= i
+												 srcDoc.Worksheets("1988 c. 52").Cells(r,2).value= "1988c.52"
+												 srcDoc.Worksheets("1988 c. 52").Cells(r,3).value= "Road Traffic Act"
+												 srcDoc.Worksheets("1988 c. 52").Cells(r,4).value= "Section"&secno
+												srcDoc.Worksheets("1988 c. 52").Cells(r,5).value= mismatch
+                                                'srcDoc.Worksheets("1988 c. 52").Cells(r,4).value= strpos
+												'srcDoc.Worksheets("1988 c. 52").Cells(r,5).value= endpos
+												Else
+                                                srcDoc.Worksheets("1988 c. 52").Cells(r,6).value= mismatch
+												 End if
+												srcDoc.Worksheets("1988 c. 52").Cells(r,5).WrapText = True
+												srcDoc.Worksheets("1988 c. 52").Cells(r,6).WrapText = True
+
+												 'srcDoc.worksheets("1988 c. 52").Cells.EntireColumn.AutoFit 
+                                                srcDoc.Save 
+												srcData.Workbooks.Close
+                                                srcData.Quit 
+												set srcData=Nothing
+End function
+'******************************************************************************************************************************
+'// Close Process winword
+systemutil.CloseProcessByName "WINWORD.exe"
+'*********************************************************************************************************************End of Script************************
+
+
+
+
+
+
+
+
+
+
+
+
+

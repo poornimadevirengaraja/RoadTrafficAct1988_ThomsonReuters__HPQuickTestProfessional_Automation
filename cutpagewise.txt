@@ -1,0 +1,111 @@
+﻿LCC_header =11.5
+Const wdStory = 6
+Counter = 1
+
+' splitting the docs page wise
+While Counter < 9
+Set objWord = CreateObject("Word.Application")
+objWord.Documents.Open ("C:\Documents and Settings\poornimar\Desktop\WLDoc__RTA 1988 1.doc")
+objWord.visible=True
+Set origDoc = objWord.ActiveDocument
+Set objectselection=objWord.selection
+objectselection.HomeKey wdStory
+objWord.ActiveDocument.Bookmarks("\page").Range.Cut
+objWord.Documents.Add
+objWord.Selection.Paste
+objWord.ActiveDocument.saveas "C:\Documents and Settings\poornimar\Desktop\LCC_sections\LCC"&Counter&".doc"
+objWord.ActiveDocument.Close
+objWord.Activewindow.close
+Counter = Counter +1
+Wend
+SystemUtil.CloseProcessByName("WINWORD.exe") 
+
+' splitting the docs section wise
+Counter = 1
+While Counter < 9
+Header=0
+set introa=CreateObject("Word.Application")
+set introb=introa.Documents.Open("C:\Documents and Settings\poornimar\Desktop\LCC_sections\LCC"&Counter&".doc")
+introp_count= introb.Paragraphs.Count
+'msgbox "paragraph="&introp_count
+introc=1
+
+Do until introc=introp_count
+introstr_range=introb.Paragraphs(introc).Range.Start
+introend_range=introb.Paragraphs(introc).Range.End
+Set intros_range=introb.Range(introstr_range,introend_range)
+introx_str=intros_range.Text
+
+Set introobjectrange=introb.Paragraphs(introc).range
+introfonsz=introobjectrange.Font.Size
+
+If introfonsz=LCC_header Then
+	Header="Found"
+End if 
+introc=introc+1
+
+Loop
+introa.Quit
+set introa=nothing
+set introb=nothing
+
+
+If Header<>"Found"  Then
+i=i+1
+set introa2=CreateObject("Word.Application")
+introa2.Documents.Open "C:\Documents and Settings\poornimar\Desktop\LCC_sections\LCC"&Counter&".doc"
+introa2.visible=True
+Set origDoc1 = introa2.ActiveDocument
+Set objectselection1=introa2.selection
+objectselection1.HomeKey wdStory
+introa2.ActiveDocument.Bookmarks("\page").Range.Cut
+set objectselection1=nothing
+introa2.Documents.open "C:\Documents and Settings\poornimar\Desktop\LCC_sections\LCC"&Counter-i&".doc"
+Set objectselection2=introa2.selection
+objectselection2.EndKey wdStory
+introa2.Selection.Paste
+introa2.ActiveDocument.saveas "C:\Documents and Settings\poornimar\Desktop\LCC_sections\LCC"&Counter-i&".doc"
+set objectselection1=nothing
+introa2.ActiveDocument.close
+introa2.Activewindow.close
+Set introa2=Nothing
+set introa3=CreateObject("Scripting.FileSystemObject")
+introa3.deletefile "C:\Documents and Settings\poornimar\Desktop\LCC_sections\LCC"&Counter&".doc"
+Set introa3=Nothing
+
+Counter=Counter+1
+Else
+Counter=Counter+1
+i=0
+End if
+Wend
+SystemUtil.CloseProcessByName("WINWORD.exe") 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
